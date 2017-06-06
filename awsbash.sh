@@ -420,38 +420,38 @@ deploy_wait() {
   h1 "Step 8: Deployment Overview"
 
   DEPLOYMENT_GET="aws deploy get-deployment --deployment-id ${DEPLOYMENT_ID} --query \"deploymentInfo.status\" --output text "
-  h2 "Monitoring deployment \"$DEPLOYMENT_ID\" for \"$APPLICATION_NAME\" on deployment group $DEPLOYMENT_GROUP ..."
+  h2 "Monitoring deployment \"${DEPLOYMENT_ID}\" for \"${APPLICATION_NAME}\" on deployment group ${DEPLOYMENT_GROUP} ..."
   info "$DEPLOYMENT_GET"
 
   while true; do
     DEPLOYMENT_GET_OUTPUT="$(eval $DEPLOYMENT_GET 2>&1)"
     if [ $? != 0 ]; then
       warnError "$DEPLOYMENT_GET_OUTPUT"
-      error "Deployment of application \"$APPLICATION_NAME\" on deployment group \"$DEPLOYMENT_GROUP\" failed"
+      error "Deployment of application \"${APPLICATION_NAME}\" on deployment group \"${DEPLOYMENT_GROUP}\" failed"
       exit 1
     fi
 
     # Deployment Overview
-    STATUS=$DEPLOYMENT_GET_OUTPUT;
+    STATUS="${DEPLOYMENT_GET_OUTPUT}";
 
-    info ${STATUS};
+    info "${STATUS}";
 
     if [ "$STATUS" == "Failed" ]; then
       OUTPUT=$(eval aws autoscaling delete-auto-scaling-group --force-delete --auto-scaling-group-name CodeDeploy_${DEPLOYMENT_GROUP}_${DEPLOYMENT_ID} 2>&1);
-      warnError "$OUTPUT"
+      warnError "${OUTPUT}"
       exit 1;
     elif [ "$STATUS" == "Stopped" ]; then
       OUTPUT=$(eval aws autoscaling delete-auto-scaling-group --force-delete --auto-scaling-group-name CodeDeploy_${DEPLOYMENT_GROUP}_${DEPLOYMENT_ID} 2>&1);
-      warnError "$OUTPUT"
+      warnError "${OUTPUT}"
       exit 1;
     elif [ "$STATUS" == "Succeeded" ]; then
       if [ "$DEPLOYMENT_OVERVIEW" == "Succeeded" ]; then
-        success "Deployment of application '$APPLICATION_NAME' on deployment group '$DEPLOYMENT_GROUP' succeeded"
+        success "Deployment of application '${APPLICATION_NAME}' on deployment group '${DEPLOYMENT_GROUP}' succeeded"
         break;
       fi;
     elif [ "$STATUS" == "Ready" ]; then
       if [ "$DEPLOYMENT_OVERVIEW" == "Ready" ]; then
-        success "Deployment of application '$APPLICATION_NAME' on deployment group '$DEPLOYMENT_GROUP' ready"
+        success "Deployment of application '${APPLICATION_NAME}' on deployment group '${DEPLOYMENT_GROUP}' ready"
         break;
       fi
     else
