@@ -437,7 +437,7 @@ deploy_wait() {
     info ${STATUS};
 
     if [ "$STATUS" == "Failed" ]; then
-      OUTPUT=$(eval aws autoscaling delete-auto-scaling-group --force-delete --auto-scaling-group-name CodeDeploy_${DEPLOYMENT_GROUP}_${DEPLOYMENT_ID} 2>&1);
+      #OUTPUT=$(eval aws autoscaling delete-auto-scaling-group --force-delete --auto-scaling-group-name CodeDeploy_${DEPLOYMENT_GROUP}_${DEPLOYMENT_ID} 2>&1);
       warnError "$OUTPUT"
       exit 1;
     elif [ "$STATUS" == "Stopped" ]; then
