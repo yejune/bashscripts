@@ -516,7 +516,7 @@ function awscli()
     sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
 }
 
-function docker()
+function dockerInstall()
 {
     curl -s https://get.docker.com | sudo sh;
     sudo usermod -aG docker ubuntu;
