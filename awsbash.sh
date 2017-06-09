@@ -420,49 +420,48 @@ deploy_wait() {
   h1 "Step 8: Deployment Overview"
 
   DEPLOYMENT_GET="aws deploy get-deployment --deployment-id ${DEPLOYMENT_ID} --query \"deploymentInfo.status\" --output text "
-  h2 "Monitoring deployment \"${DEPLOYMENT_ID}\" for \"${APPLICATION_NAME}\" on deployment group ${DEPLOYMENT_GROUP} ..."
+  h2 "Monitoring deployment \"$DEPLOYMENT_ID\" for \"$APPLICATION_NAME\" on deployment group $DEPLOYMENT_GROUP ..."
   info "$DEPLOYMENT_GET"
 
   while true; do
     DEPLOYMENT_GET_OUTPUT="$(eval $DEPLOYMENT_GET 2>&1)"
     if [ $? != 0 ]; then
       warnError "$DEPLOYMENT_GET_OUTPUT"
-      error "Deployment of application \"${APPLICATION_NAME}\" on deployment group \"${DEPLOYMENT_GROUP}\" failed"
+      error "Deployment of application \"$APPLICATION_NAME\" on deployment group \"$DEPLOYMENT_GROUP\" failed"
       exit 1
     fi
 
     # Deployment Overview
-    STATUS="${DEPLOYMENT_GET_OUTPUT}";
+    STATUS=$DEPLOYMENT_GET_OUTPUT;
 
-    info "${STATUS}";
+    info ${STATUS};
 
     if [ "$STATUS" == "Failed" ]; then
       OUTPUT=$(eval aws autoscaling delete-auto-scaling-group --force-delete --auto-scaling-group-name CodeDeploy_${DEPLOYMENT_GROUP}_${DEPLOYMENT_ID} 2>&1);
-      warnError "${OUTPUT}"
+      warnError "$OUTPUT"
       exit 1;
     elif [ "$STATUS" == "Stopped" ]; then
       OUTPUT=$(eval aws autoscaling delete-auto-scaling-group --force-delete --auto-scaling-group-name CodeDeploy_${DEPLOYMENT_GROUP}_${DEPLOYMENT_ID} 2>&1);
-      warnError "${OUTPUT}"
+      warnError "$OUTPUT"
       exit 1;
     elif [ "$STATUS" == "Succeeded" ]; then
       if [ "$DEPLOYMENT_OVERVIEW" == "Succeeded" ]; then
-        success "Deployment of application '${APPLICATION_NAME}' on deployment group '${DEPLOYMENT_GROUP}' succeeded"
+        success "Deployment ${DEPLOYMENT_ID} of application '${APPLICATION_NAME}' on deployment group '${DEPLOYMENT_GROUP}' succeeded"
         break;
       fi;
     elif [ "$STATUS" == "Ready" ]; then
       if [ "$DEPLOYMENT_OVERVIEW" == "Ready" ]; then
-        success "Deployment of application '${APPLICATION_NAME}' on deployment group '${DEPLOYMENT_GROUP}' ready"
+        success "Deployment ${DEPLOYMENT_ID} of application '${APPLICATION_NAME}' on deployment group '${DEPLOYMENT_GROUP}' ready"
         break;
       fi
     else
       echo "" &> /dev/null;
     fi;
-    sleep 15;
+    sleep 30;
   done
 }
 
 deploy_infomation() {
-  DEPLOYMENT_VAR_NAME=""
   DEPLOYMENT_ID=""
   DEBUG="off"
   while true; do
@@ -474,7 +473,6 @@ deploy_infomation() {
         -v | --DEBUG ) DEBUG="$2"; shift 2 ;;
         -d | --DEPLOYMENT-ID ) DEPLOYMENT_ID="$2"; shift 2 ;;
         -* ) echo "unknown option: $1" >&2; exit 1; shift; break ;;
-        * ) DEPLOYMENT_VAR_NAME="$1"; shift 1;;
       esac
     else
       break;
@@ -482,6 +480,7 @@ deploy_infomation() {
   done
 
   INSTANCE_GET="aws deploy list-deployment-instances --instance-type-filter Green --deployment-id \"${DEPLOYMENT_ID}\" --output text --query \"instancesList\""
+
   runCommand "$INSTANCE_GET" \
       "error" \
       "" \
@@ -489,31 +488,269 @@ deploy_infomation() {
 
   INSTANCE_LEN=${#INSTANCE_IDS[@]}
 
-  JSON_STRING="{\"DEPLOYMENT_ID\": \"<a href=\\\"https://console.aws.amazon.com/codedeploy/home#/deployments/${DEPLOYMENT_ID}\\\" target='_blank'>${DEPLOYMENT_ID}</a>\","
-  JSON_STRING+="\"INSTANCES\": ["
   for i in "${!INSTANCE_IDS[@]}"; do
     j=$(($i+1))
     INSTANCE_ID=${INSTANCE_IDS[$i]}
 
-    PUBLIC_DNS_GET="aws ec2 describe-instances --instance-ids ${INSTANCE_ID} --output text --query 'Reservations[].Instances[].PublicDnsName'"
+    PUBLIC_DNS_GET="aws ec2 describe-instances --instance-ids ${INSTANCE_ID} --output text --query 'Reservations[*].Instances[*].[InstanceId, NetworkInterfaces[0].Association.PublicIp, NetworkInterfaces[0].PrivateIpAddress]'"
+
+    #export AWS_DEFAULT_PROFILE=api && source deploy/scripts/awsbash.sh && deploy_infomation --DEPLOYMENT-ID "d-MJB03101L"
+
     runCommand "$PUBLIC_DNS_GET" \
         "error" \
         "" \
         PUBLIC_DNS
 
-    JSON_STRING+=$(printf "{\"INSTANCE_ID\": \"%s\",\"PUBLIC_DNS\": \"%s\"}\n" "${INSTANCE_ID}" "<a href=\\\"http://${PUBLIC_DNS}\\\" target=\\\"_blank\\\">${PUBLIC_DNS}</a>")
-
-    if [ "$j" -lt "$INSTANCE_LEN" ]; then
-      JSON_STRING+=", "
-    fi
+    echo "${PUBLIC_DNS}"
 
   done
-  JSON_STRING+="]}";
 
-  echo "${JSON_STRING}"
-
-  if [ ! -z "$DEPLOYMENT_VAR_NAME" ]; then
-    eval "$DEPLOYMENT_VAR_NAME='$JSON_STRING'"
-    export $DEPLOYMENT_VAR_NAME
-  fi
 }
+
+
+function awscli()
+{
+    sudo apt-get -y install python zip unzip
+    curl https://s3.amazonaws.com/aws-cli/awscli-bundle.zip -o awscli-bundle.zip
+    unzip awscli-bundle.zip
+    sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
+}
+
+function docker()
+{
+    curl -s https://get.docker.com | sudo sh;
+    sudo usermod -aG docker ubuntu;
+
+    sudo mkdir -p /etc/systemd/system/docker.service.d/
+
+    sudo touch /etc/systemd/system/docker.service.d/aws-credentials.conf
+    echo "[Service]" | sudo tee --append /etc/systemd/system/docker.service.d/aws-credentials.conf > /dev/null
+    echo "Environment=\"AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}\"" | sudo tee --append  /etc/systemd/system/docker.service.d/aws-credentials.conf > /dev/null
+    echo "Environment=\"AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}\"" | sudo tee --append /etc/systemd/system/docker.service.d/aws-credentials.conf > /dev/null
+
+    sudo systemctl daemon-reload
+    sudo service docker restart
+}
+
+function codedeploy()
+{
+    sudo apt-get -y install ruby wget
+
+    REGION=`wget -qO- http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//'`
+
+    wget https://aws-codedeploy-${REGION}.s3.amazonaws.com/latest/install
+    chmod +x ./install
+    sudo ./install auto
+}
+
+function awslogs()
+{
+    sudo apt-get -y install python curl
+    REGION=`wget -qO- http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//'`
+
+    sudo mkdir -p /var/awslogs/etc/config
+    sudo mkdir -p /var/awslogs/state/
+    sudo mkdir -p /opt/codedeploy-agent/deployment-root/deployment-logs/
+
+    sudo touch /var/awslogs/state/agent-state
+    sudo touch /opt/codedeploy-agent/deployment-root/deployment-logs/codedeploy-agent-deployments.log
+    echo "
+[general]
+state_file = /var/awslogs/state/agent-state
+
+[${DEPLOYMENT_GROUP_NAME}]
+datetime_format = %Y-%m-%d %H:%M:%S
+file = /var/log/syslog
+log_group_name = ${DEPLOYMENT_GROUP_NAME}
+log_stream_name = {instance_id}
+
+[codedeploy-deployment-log]
+datetime_format = %Y-%m-%d %H:%M:%S
+file = /opt/codedeploy-agent/deployment-root/deployment-logs/codedeploy-agent-deployments.log
+log_group_name = /var/log/codedeploy/deployments-log
+log_stream_name = {instance_id}
+" | sudo tee --append  /var/awslogs/etc/config/awslogs.conf
+
+    sudo curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py -O
+    sudo chmod +x ./awslogs-agent-setup.py
+    sudo ./awslogs-agent-setup.py -n -r "${REGION}" -c /var/awslogs/etc/config/awslogs.conf
+
+}
+
+function awsconfig()
+{
+    aws configure set aws_access_key_id "${AWS_ACCESS_KEY_ID}"
+    aws configure set aws_secret_access_key "${AWS_SECRET_ACCESS_KEY}"
+    aws configure set default.region "${AWS_REGION}"
+    aws configure set default.output "json"
+
+    # HOME_FOLDER='~/.aws';
+    # mkdir -p "${HOME_FOLDER}"
+    #
+    # touch "${HOME_FOLDER}/config"
+    # echo "[default]" | tee --append "${HOME_FOLDER}/config"
+    # echo "output = json" | tee --append "${HOME_FOLDER}/config"
+    # echo "region = ap-northeast-2" | tee --append "${HOME_FOLDER}/config"
+    #
+    # touch "${HOME_FOLDER}/credentials"
+    # echo "[default]" | tee --append "${HOME_FOLDER}/credentials"
+    # echo "aws_access_key_id = ${AWS_ACCESS_KEY_ID}" | tee --append "${HOME_FOLDER}/credentials"
+    # echo "aws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}" | tee --append "${HOME_FOLDER}/credentials"
+}
+
+# deploy
+function xxproduction() {
+    DEPLOYMENT_GROUP_NAME="${APP}-Prod"
+
+    source "/home/ubuntu/deploy/scripts/envs/${APP}-Build.sh"
+    docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
+    docker exec buildserver /bin/bash -c "apt-get update -y"
+    docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
+    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
+    source "/home/ubuntu/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh"
+
+    # save image to tgz
+    runCommand "docker save webserver | gzip -c > deploy/webserver.tgz"
+
+    deploy_create \
+        --DEBUG beauty \
+        --APPLICATION-NAME "${APPLICATION_NAME}" \
+        --DEPLOYMENT-GROUP "${DEPLOYMENT_GROUP_NAME}" \
+        --S3-LOCATION-BUCKET "${S3_LOCATION_BUCKET}" \
+        --S3-FOLDER-NAME "${S3_FOLDER_NAME}" \
+        --DEPLOYMENT-OVERVIEW Succeeded \
+        DEPLOYMENT_ID
+
+    deploy_infomation \
+    --DEPLOYMENT-ID "${DEPLOYMENT_ID}"
+}
+
+function xxstaging() {
+    DEPLOYMENT_GROUP_NAME="${APP}-Staging"
+
+    source "/home/ubuntu/deploy/scripts/envs/${APP}-Build.sh"
+    docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
+    docker exec buildserver /bin/bash -c "apt-get update -y"
+    docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
+    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
+    source "/home/ubuntu/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh"
+
+    # save image to tgz
+    runCommand "docker save webserver | gzip -c > deploy/webserver.tgz"
+
+    deploy_create \
+        --DEBUG beauty \
+        --APPLICATION-NAME "${APPLICATION_NAME}" \
+        --DEPLOYMENT-GROUP "${DEPLOYMENT_GROUP_NAME}" \
+        --S3-LOCATION-BUCKET "${S3_LOCATION_BUCKET}" \
+        --S3-FOLDER-NAME "${S3_FOLDER_NAME}" \
+        --DEPLOYMENT-OVERVIEW Succeeded \
+        DEPLOYMENT_ID
+
+    deploy_infomation \
+    --DEPLOYMENT-ID "${DEPLOYMENT_ID}"
+}
+
+function prodcution() {
+    DOMAINS=$@
+
+    sudo apt-get install -y php
+
+    ENVIRONMENT_NAME="${APP}-Production"
+    ELB_NAME="${ENVIRONMENT_NAME}-LoadBalancer"
+
+    ELB_OUTPUT=`aws elb describe-load-balancers --load-balancer-names ${ELB_NAME}`
+
+    SECURITY_GROUPS=`echo $ELB_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["LoadBalancerDescriptions"][0]["SecurityGroups"] as $v) echo $v." ";'`;
+
+    INSTANCE_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4`
+    INSTANCE_ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
+
+    HOSTED_ZONES=`aws route53 list-hosted-zones-by-name`
+    HOSTED_ZONE_ID=`echo $HOSTED_ZONES | php -r "foreach(json_decode(fgets(STDIN), true)['HostedZones'] as \$v) if(\$v['Name']=="${HOSTED_ZONE}.") echo str_replace('/hostedzone/',', \$v['Id']).' ';"`;
+
+    for DOMAIN in "${DOMAINS[@]}"; do
+        INPUT_JSON="{\"ChangeBatch\": {\"Comment\": \"SUPERVOLT : Update the A record set\", \"Changes\": [{\"Action\": \"UPSERT\", \"ResourceRecordSet\": {\"Name\": \"${DOMAIN}\", \"Type\": \"A\", \"TTL\": 300, \"ResourceRecords\": [{\"Value\": \"$INSTANCE_IP\"}]}}]}}"
+
+        aws route53 change-resource-record-sets --hosted-zone-id "${HOSTED_ZONE_ID}" --cli-input-json "${INPUT_JSON}"
+    done
+
+    aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}
+
+    source "/home/ubuntu/deploy/scripts/envs/${APP}-Build.sh"
+    docker exec buildserver /bin/bash -c "apt-get update -y"
+    docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
+    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
+    docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
+    source "/home/ubuntu/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh"
+}
+
+
+function staging() {
+    DOMAINS=$@
+
+    sudo apt-get install -y php
+
+    ENVIRONMENT_NAME="${APP}-Staging"
+    ELB_NAME="${ENVIRONMENT_NAME}-LoadBalancer"
+
+    ELB_OUTPUT=`aws elb describe-load-balancers --load-balancer-names ${ELB_NAME}`
+
+    SECURITY_GROUPS=`echo $ELB_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["LoadBalancerDescriptions"][0]["SecurityGroups"] as $v) echo $v." ";'`;
+
+    INSTANCE_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4`
+    INSTANCE_ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
+
+    HOSTED_ZONES=`aws route53 list-hosted-zones-by-name`
+    HOSTED_ZONE_ID=`echo $HOSTED_ZONES | php -r 'foreach(json_decode(fgets(STDIN), true)["HostedZones"] as $v) if($v["Name"]=="${HOSTED_ZONE}.") echo str_replace("/hostedzone/","", $v["Id"])." ";'`;
+
+    for DOMAIN in "${DOMAINS[@]}"; do
+        INPUT_JSON="{\"ChangeBatch\": {\"Comment\": \"SUPERVOLT : Update the A record set\", \"Changes\": [{\"Action\": \"UPSERT\", \"ResourceRecordSet\": {\"Name\": \"${DOMAIN}\", \"Type\": \"A\", \"TTL\": 300, \"ResourceRecords\": [{\"Value\": \"$INSTANCE_IP\"}]}}]}}"
+
+        aws route53 change-resource-record-sets --hosted-zone-id "${HOSTED_ZONE_ID}" --cli-input-json "${INPUT_JSON}"
+    done
+
+    aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}
+
+    source "/home/ubuntu/deploy/scripts/envs/${APP}-Build.sh"
+    docker exec buildserver /bin/bash -c "apt-get update -y"
+    docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
+    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
+    docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
+    source "/home/ubuntu/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh"
+}
+
+function test() {
+    DOMAINS=$@
+
+    sudo apt-get install -y php
+
+    ENVIRONMENT_NAME="${APP}-Test"
+    ELB_NAME="${ENVIRONMENT_NAME}-LoadBalancer"
+
+    ELB_OUTPUT=`aws elb describe-load-balancers --load-balancer-names ${ELB_NAME}`
+
+    SECURITY_GROUPS=`echo $ELB_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["LoadBalancerDescriptions"][0]["SecurityGroups"] as $v) echo $v." ";'`;
+
+    INSTANCE_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4`
+    INSTANCE_ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
+
+    HOSTED_ZONES=`aws route53 list-hosted-zones-by-name`
+    HOSTED_ZONE_ID=`echo $HOSTED_ZONES | php -r 'foreach(json_decode(fgets(STDIN), true)["HostedZones"] as $v) if($v["Name"]=="${HOSTED_ZONE}.") echo str_replace("/hostedzone/","", $v["Id"])." ";'`;
+
+    for DOMAIN in "${DOMAINS[@]}"; do
+        INPUT_JSON="{\"ChangeBatch\": {\"Comment\": \"SUPERVOLT : Update the A record set\", \"Changes\": [{\"Action\": \"UPSERT\", \"ResourceRecordSet\": {\"Name\": \"${DOMAIN}\", \"Type\": \"A\", \"TTL\": 300, \"ResourceRecords\": [{\"Value\": \"$INSTANCE_IP\"}]}}]}}"
+
+        aws route53 change-resource-record-sets --hosted-zone-id "${HOSTED_ZONE_ID}" --cli-input-json "${INPUT_JSON}"
+    done
+
+    aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}
+
+    source "/home/ubuntu/deploy/scripts/envs/${APP}-Build.sh"
+    docker exec buildserver /bin/bash -c "apt-get update -y"
+    docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
+    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
+    docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
+    source "/home/ubuntu/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh"
+}
+
