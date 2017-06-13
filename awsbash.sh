@@ -651,7 +651,7 @@ function xxstaging() {
     --DEPLOYMENT-ID "${DEPLOYMENT_ID}"
 }
 
-function prodcution() {
+function deploy_prodcution() {
     DOMAINS=$@
 
     sudo apt-get install -y php
@@ -686,7 +686,7 @@ function prodcution() {
 }
 
 
-function staging() {
+function deploy_staging() {
     DOMAINS=$@
 
     sudo apt-get install -y php
@@ -720,7 +720,7 @@ function staging() {
     source "/home/ubuntu/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh"
 }
 
-function test() {
+function deploy_test() {
     DOMAINS=$@
 
     sudo apt-get install -y php
