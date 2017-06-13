@@ -680,8 +680,8 @@ function deploy_prodcution() {
     source "$(pwd)/deploy/scripts/envs/${APP}-Build.sh"
     docker exec buildserver /bin/bash -c "apt-get update -y"
     docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
-    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
     docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
+    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
     source "$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh"
 }
 
@@ -715,8 +715,8 @@ function deploy_staging() {
     source "$(pwd)/deploy/scripts/envs/${APP}-Build.sh"
     docker exec buildserver /bin/bash -c "apt-get update -y"
     docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
-    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
     docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
+    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
     source "$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh"
 }
 
@@ -749,8 +749,8 @@ function deploy_test() {
     source "$(pwd)/deploy/scripts/envs/${APP}-Build.sh"
     docker exec buildserver /bin/bash -c "apt-get update -y"
     docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
-    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
     docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
+    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
     source "$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh"
 }
 
