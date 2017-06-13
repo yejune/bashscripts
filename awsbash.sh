@@ -746,11 +746,11 @@ function deploy_test() {
 
     aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}
 
-    source "/home/ubuntu/deploy/scripts/envs/${APP}-Build.sh"
+    source "$(pwd)/deploy/scripts/envs/${APP}-Build.sh"
     docker exec buildserver /bin/bash -c "apt-get update -y"
     docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
     docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
     docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
-    source "/home/ubuntu/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh"
+    source "$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh"
 }
 
