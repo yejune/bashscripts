@@ -664,8 +664,8 @@ function deploy_prodcution() {
 
     SECURITY_GROUPS=`echo $ELB_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["LoadBalancerDescriptions"][0]["SecurityGroups"] as $v) echo $v." ";'`;
 
-    runCommand "curl http://169.254.169.254/latest/meta-data/public-ipv4" "" "" INSTANCE_IP
-    runCommand "curl http://169.254.169.254/latest/meta-data/instance-id" "" "" INSTANCE_ID
+    INSTANCE_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+    INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
 
     runCommand "aws route53 list-hosted-zones-by-name" "" "" HOSTED_ZONES
     HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
@@ -700,8 +700,8 @@ function deploy_staging() {
 
     SECURITY_GROUPS=`echo $ELB_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["LoadBalancerDescriptions"][0]["SecurityGroups"] as $v) echo $v." ";'`;
 
-    runCommand "curl http://169.254.169.254/latest/meta-data/public-ipv4" "" "" INSTANCE_IP
-    runCommand "curl http://169.254.169.254/latest/meta-data/instance-id" "" "" INSTANCE_ID
+    INSTANCE_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+    INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
 
     runCommand "aws route53 list-hosted-zones-by-name" "" "" HOSTED_ZONES
     HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
@@ -735,8 +735,8 @@ function deploy_test() {
 
     SECURITY_GROUPS=`echo $ELB_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["LoadBalancerDescriptions"][0]["SecurityGroups"] as $v) echo $v." ";'`;
 
-    runCommand "curl http://169.254.169.254/latest/meta-data/public-ipv4" "" "" INSTANCE_IP
-    runCommand "curl http://169.254.169.254/latest/meta-data/instance-id" "" "" INSTANCE_ID
+    INSTANCE_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+    INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
 
     runCommand "aws route53 list-hosted-zones-by-name" "" "" HOSTED_ZONES
     HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
