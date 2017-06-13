@@ -654,7 +654,8 @@ function xxstaging() {
 function deploy_prodcution() {
     DOMAINS=$@
 
-    sudo apt-get install -y php
+    runCommand "sudo apt-get install -y php"
+    awsconfig
 
     ENVIRONMENT_NAME="${APP}-Production"
     ELB_NAME="${ENVIRONMENT_NAME}LoadBalancer"
@@ -663,10 +664,10 @@ function deploy_prodcution() {
 
     SECURITY_GROUPS=`echo $ELB_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["LoadBalancerDescriptions"][0]["SecurityGroups"] as $v) echo $v." ";'`;
 
-    INSTANCE_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4`
-    INSTANCE_ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
+    runCommand "curl http://169.254.169.254/latest/meta-data/public-ipv4" "" "" INSTANCE_IP
+    runCommand "curl http://169.254.169.254/latest/meta-data/instance-id" "" "" INSTANCE_ID
 
-    HOSTED_ZONES=`aws route53 list-hosted-zones-by-name`
+    runCommand "aws route53 list-hosted-zones-by-name" "" "" HOSTED_ZONES
     HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
 
     for DOMAIN in "${DOMAINS[@]}"; do
@@ -689,7 +690,8 @@ function deploy_prodcution() {
 function deploy_staging() {
     DOMAINS=$@
 
-    sudo apt-get install -y php
+    runCommand "sudo apt-get install -y php"
+    awsconfig
 
     ENVIRONMENT_NAME="${APP}-Staging"
     ELB_NAME="${ENVIRONMENT_NAME}LoadBalancer"
@@ -698,10 +700,10 @@ function deploy_staging() {
 
     SECURITY_GROUPS=`echo $ELB_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["LoadBalancerDescriptions"][0]["SecurityGroups"] as $v) echo $v." ";'`;
 
-    INSTANCE_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4`
-    INSTANCE_ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
+    runCommand "curl http://169.254.169.254/latest/meta-data/public-ipv4" "" "" INSTANCE_IP
+    runCommand "curl http://169.254.169.254/latest/meta-data/instance-id" "" "" INSTANCE_ID
 
-    HOSTED_ZONES=`aws route53 list-hosted-zones-by-name`
+    runCommand "aws route53 list-hosted-zones-by-name" "" "" HOSTED_ZONES
     HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
 
     for DOMAIN in "${DOMAINS[@]}"; do
@@ -723,7 +725,8 @@ function deploy_staging() {
 function deploy_test() {
     DOMAINS=$@
 
-    sudo apt-get install -y php
+    runCommand "sudo apt-get install -y php"
+    awsconfig
 
     ENVIRONMENT_NAME="${APP}-Test"
     ELB_NAME="${ENVIRONMENT_NAME}LoadBalancer"
@@ -732,10 +735,10 @@ function deploy_test() {
 
     SECURITY_GROUPS=`echo $ELB_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["LoadBalancerDescriptions"][0]["SecurityGroups"] as $v) echo $v." ";'`;
 
-    INSTANCE_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4`
-    INSTANCE_ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
+    runCommand "curl http://169.254.169.254/latest/meta-data/public-ipv4" "" "" INSTANCE_IP
+    runCommand "curl http://169.254.169.254/latest/meta-data/instance-id" "" "" INSTANCE_ID
 
-    HOSTED_ZONES=`aws route53 list-hosted-zones-by-name`
+    runCommand "aws route53 list-hosted-zones-by-name" "" "" HOSTED_ZONES
     HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
 
     for DOMAIN in "${DOMAINS[@]}"; do
