@@ -657,7 +657,7 @@ function deploy_prodcution() {
     sudo apt-get install -y php
 
     ENVIRONMENT_NAME="${APP}-Production"
-    ELB_NAME="${ENVIRONMENT_NAME}-LoadBalancer"
+    ELB_NAME="${ENVIRONMENT_NAME}LoadBalancer"
 
     ELB_OUTPUT=`aws elb describe-load-balancers --load-balancer-names ${ELB_NAME}`
 
@@ -692,7 +692,7 @@ function deploy_staging() {
     sudo apt-get install -y php
 
     ENVIRONMENT_NAME="${APP}-Staging"
-    ELB_NAME="${ENVIRONMENT_NAME}-LoadBalancer"
+    ELB_NAME="${ENVIRONMENT_NAME}LoadBalancer"
 
     ELB_OUTPUT=`aws elb describe-load-balancers --load-balancer-names ${ELB_NAME}`
 
@@ -726,7 +726,7 @@ function deploy_test() {
     sudo apt-get install -y php
 
     ENVIRONMENT_NAME="${APP}-Test"
-    ELB_NAME="${ENVIRONMENT_NAME}-LoadBalancer"
+    ELB_NAME="${ENVIRONMENT_NAME}LoadBalancer"
 
     ELB_OUTPUT=`aws elb describe-load-balancers --load-balancer-names ${ELB_NAME}`
 
