@@ -667,7 +667,7 @@ function deploy_prodcution() {
     INSTANCE_ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
 
     HOSTED_ZONES=`aws route53 list-hosted-zones-by-name`
-    HOSTED_ZONE_ID=`echo $HOSTED_ZONES | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);"`;
+    HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
 
     for DOMAIN in "${DOMAINS[@]}"; do
         INPUT_JSON="{\"ChangeBatch\": {\"Comment\": \"SUPERVOLT : Update the A record set\", \"Changes\": [{\"Action\": \"UPSERT\", \"ResourceRecordSet\": {\"Name\": \"${DOMAIN}\", \"Type\": \"A\", \"TTL\": 300, \"ResourceRecords\": [{\"Value\": \"$INSTANCE_IP\"}]}}]}}"
@@ -702,7 +702,7 @@ function deploy_staging() {
     INSTANCE_ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
 
     HOSTED_ZONES=`aws route53 list-hosted-zones-by-name`
-    HOSTED_ZONE_ID=`echo $HOSTED_ZONES | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);"`;
+    HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
 
     for DOMAIN in "${DOMAINS[@]}"; do
         INPUT_JSON="{\"ChangeBatch\": {\"Comment\": \"SUPERVOLT : Update the A record set\", \"Changes\": [{\"Action\": \"UPSERT\", \"ResourceRecordSet\": {\"Name\": \"${DOMAIN}\", \"Type\": \"A\", \"TTL\": 300, \"ResourceRecords\": [{\"Value\": \"$INSTANCE_IP\"}]}}]}}"
@@ -736,7 +736,7 @@ function deploy_test() {
     INSTANCE_ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
 
     HOSTED_ZONES=`aws route53 list-hosted-zones-by-name`
-    HOSTED_ZONE_ID=`echo $HOSTED_ZONES | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);"`;
+    HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
 
     for DOMAIN in "${DOMAINS[@]}"; do
         INPUT_JSON="{\"ChangeBatch\": {\"Comment\": \"SUPERVOLT : Update the A record set\", \"Changes\": [{\"Action\": \"UPSERT\", \"ResourceRecordSet\": {\"Name\": \"${DOMAIN}\", \"Type\": \"A\", \"TTL\": 300, \"ResourceRecords\": [{\"Value\": \"$INSTANCE_IP\"}]}}]}}"
