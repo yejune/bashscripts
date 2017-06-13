@@ -712,12 +712,12 @@ function deploy_staging() {
 
     aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}
 
-    source "$(pwd)/deploy/scripts/envs/${APP}-Build.sh"
-    docker exec buildserver /bin/bash -c "apt-get update -y"
-    docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
-    docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
-    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
-    source "$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh"
+    runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "" "build run"
+    runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"'
+    runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"'
+    runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";'
+    runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";'
+    runCommand "source '$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh'"
 }
 
 function deploy_test() {
