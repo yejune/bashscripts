@@ -507,7 +507,6 @@ deploy_infomation() {
 
 }
 
-
 function awscli()
 {
     sudo apt-get -y install python zip unzip
@@ -598,64 +597,11 @@ function awsconfig()
     # echo "aws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}" | tee --append "${HOME_FOLDER}/credentials"
 }
 
-# deploy
-function xxproduction() {
-    DEPLOYMENT_GROUP_NAME="${APP}-Prod"
-
-    source "/home/ubuntu/deploy/scripts/envs/${APP}-Build.sh"
-    docker exec buildserver /bin/bash -c "apt-get update -y"
-    docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
-    docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
-    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
-    source "/home/ubuntu/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh"
-
-    # save image to tgz
-    runCommand "docker save webserver | gzip -c > deploy/webserver.tgz"
-
-    deploy_create \
-        --DEBUG beauty \
-        --APPLICATION-NAME "${APPLICATION_NAME}" \
-        --DEPLOYMENT-GROUP "${DEPLOYMENT_GROUP_NAME}" \
-        --S3-LOCATION-BUCKET "${S3_LOCATION_BUCKET}" \
-        --S3-FOLDER-NAME "${S3_FOLDER_NAME}" \
-        --DEPLOYMENT-OVERVIEW Succeeded \
-        DEPLOYMENT_ID
-
-    deploy_infomation \
-    --DEPLOYMENT-ID "${DEPLOYMENT_ID}"
-}
-
-function xxstaging() {
-    DEPLOYMENT_GROUP_NAME="${APP}-Staging"
-
-    source "/home/ubuntu/deploy/scripts/envs/${APP}-Build.sh"
-    docker exec buildserver /bin/bash -c "apt-get update -y"
-    docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
-    docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
-    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
-    source "/home/ubuntu/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh"
-
-    # save image to tgz
-    runCommand "docker save webserver | gzip -c > deploy/webserver.tgz"
-
-    deploy_create \
-        --DEBUG beauty \
-        --APPLICATION-NAME "${APPLICATION_NAME}" \
-        --DEPLOYMENT-GROUP "${DEPLOYMENT_GROUP_NAME}" \
-        --S3-LOCATION-BUCKET "${S3_LOCATION_BUCKET}" \
-        --S3-FOLDER-NAME "${S3_FOLDER_NAME}" \
-        --DEPLOYMENT-OVERVIEW Succeeded \
-        DEPLOYMENT_ID
-
-    deploy_infomation \
-    --DEPLOYMENT-ID "${DEPLOYMENT_ID}"
-}
-
 function test_deploy() {
 
   local ENVIRONMENT_NAME=""
   local HOSTED_ZONE=""
-  local DEBUG="off"
+  #local DEBUG="off"
   local BUILD_NUMBER=$(date +"%y%m/%d-%H%M")
 
   while true; do
@@ -666,8 +612,8 @@ function test_deploy() {
         -h | --help ) usage; exit; ;;
         -v | --DEBUG ) DEBUG="$2"; shift 2 ;;
         -e | --ENVIRONMENT_NAME ) ENVIRONMENT_NAME="$2"; shift 2 ;;
-        -z | --HOSTED_ZONE="$2"; shift 2 ;;
-        -b | --BUILD_NUMBER="$2"; shift 2 ;;
+        -z | --HOSTED_ZONE ) HOSTED_ZONE="$2"; shift 2 ;;
+        -b | --BUILD_NUMBER ) BUILD_NUMBER="$2"; shift 2 ;;
         -* ) echo "unknown option: $1" >&2; exit 1; shift; break ;;
         * ) exit 1; shift 1;;
       esac
@@ -711,7 +657,7 @@ function test_deploy() {
 }
 
 function real_deploy() {
-  DEPLOYMENT_GROUP_NAME="${APP}-Staging"
+  local DEPLOYMENT_GROUP_NAME=$@
 
   runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "" "build run"
   runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"'
@@ -724,48 +670,43 @@ function real_deploy() {
   runCommand "docker save webserver | gzip -c > deploy/webserver.tgz"
 
   deploy_create \
-      --DEBUG beauty \
-      --APPLICATION-NAME "${APP}-App" \
-      --DEPLOYMENT-GROUP "${DEPLOYMENT_GROUP_NAME}" \
-      --S3-LOCATION-BUCKET "${S3_LOCATION_BUCKET}" \
-      --S3-FOLDER-NAME "${S3_FOLDER_NAME}" \
-      --DEPLOYMENT-OVERVIEW Succeeded \
-      DEPLOYMENT_ID
+    --DEBUG beauty \
+    --APPLICATION-NAME "${APP}-App" \
+    --DEPLOYMENT-GROUP "${DEPLOYMENT_GROUP_NAME}" \
+    --S3-LOCATION-BUCKET "${S3_LOCATION_BUCKET}" \
+    --S3-FOLDER-NAME "${S3_FOLDER_NAME}" \
+    --DEPLOYMENT-OVERVIEW Succeeded \
+    DEPLOYMENT_ID
 
   deploy_infomation \
-  --DEPLOYMENT-ID "${DEPLOYMENT_ID}"
-}
-
-function real_deploy_staging() {
-  test_deploy_staging test.yelloapi.io
-  real_deploy
+    --DEPLOYMENT-ID "${DEPLOYMENT_ID}"
 }
 
 function real_deploy_production() {
-  test_deploy_production yelloapi.io
-  real_deploy
+  real_deploy "${APP}-Production"
+}
+
+function real_deploy_staging() {
+  real_deploy "${APP}-Staging"
 }
 
 function test_deploy_production() {
-    test_deploy \
-        --DEBUG on \
-        --ENVIRONMENT_NAME "${APP}-Production" \
-        --HOSTED_ZONE "yelloapi.io" \
-        --DOMAINS ${@}
+  test_deploy \
+    --ENVIRONMENT_NAME "${APP}-Production" \
+    --HOSTED_ZONE "yelloapi.io" \
+    --DOMAINS ${@}
 }
 
 function test_deploy_staging() {
-    test_deploy \
-        --DEBUG on \
-        --ENVIRONMENT_NAME "${APP}-Staging" \
-        --HOSTED_ZONE "yelloapi.io" \
-        --DOMAINS ${@}
+  test_deploy \
+    --ENVIRONMENT_NAME "${APP}-Staging" \
+    --HOSTED_ZONE "yelloapi.io" \
+    --DOMAINS ${@}
 }
 
 function test_deploy_dev() {
-    test_deploy \
-        --DEBUG on \
-        --ENVIRONMENT_NAME "${APP}-Test" \
-        --HOSTED_ZONE "yelloapi.io" \
-        --DOMAINS ${@}
+  test_deploy \
+    --ENVIRONMENT_NAME "${APP}-Test" \
+    --HOSTED_ZONE "yelloapi.io" \
+    --DOMAINS ${@}
 }
