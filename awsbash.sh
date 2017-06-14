@@ -641,7 +641,7 @@ function test_deploy() {
   done
 
   aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}
-  runCommand "aws ec2 authorize-security-group-ingress --group-name ${SECURITY_GROUPS} --protocol tcp --port 22 --cidr ${CLIENT_IP}/31" "exists" ""
+  runCommand "aws ec2 authorize-security-group-ingress --group-id ${SECURITY_GROUPS} --protocol tcp --port 22 --cidr ${CLIENT_IP}/31" "exists" ""
 
   runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "" "build run"
   runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"'
