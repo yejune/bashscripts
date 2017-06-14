@@ -701,7 +701,7 @@ function test_deploy_staging() {
 
 function test_deploy_dev() {
   test_deploy \
-    --ENVIRONMENT_NAME "${APP}-Test" \
+    --ENVIRONMENT_NAME "${APP}-Dev" \
     --HOSTED_ZONE "yelloapi.io" \
     --DOMAINS ${@}
 }
