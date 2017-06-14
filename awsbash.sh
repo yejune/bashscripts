@@ -136,7 +136,7 @@ jsonValue() {
 installAwsCli() {
   h2 "Installing AWS CLI"
   runCommand "sudo apt-get -y install python zip unzip"
-  runCommand "curl https://s3.amazonaws.com/aws-cli/awscli-bundle.zip -o awscli-bundle.zip"
+  runCommand "curl -s https://s3.amazonaws.com/aws-cli/awscli-bundle.zip -o awscli-bundle.zip"
   runCommand "unzip awscli-bundle.zip"
   runCommand "sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws"
 }
@@ -511,7 +511,7 @@ deploy_infomation() {
 function awscli()
 {
     sudo apt-get -y install python zip unzip
-    curl https://s3.amazonaws.com/aws-cli/awscli-bundle.zip -o awscli-bundle.zip
+    curl -s https://s3.amazonaws.com/aws-cli/awscli-bundle.zip -o awscli-bundle.zip
     unzip awscli-bundle.zip
     sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
 }
@@ -571,7 +571,7 @@ log_group_name = /var/log/codedeploy/deployments-log
 log_stream_name = {instance_id}
 " | sudo tee --append  /var/awslogs/etc/config/awslogs.conf
 
-    sudo curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py -O
+    sudo curl -s https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py -O
     sudo chmod +x ./awslogs-agent-setup.py
     sudo ./awslogs-agent-setup.py -n -r "${REGION}" -c /var/awslogs/etc/config/awslogs.conf
 
@@ -603,9 +603,9 @@ function xxproduction() {
     DEPLOYMENT_GROUP_NAME="${APP}-Prod"
 
     source "/home/ubuntu/deploy/scripts/envs/${APP}-Build.sh"
-    docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
     docker exec buildserver /bin/bash -c "apt-get update -y"
     docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
+    docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
     docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
     source "/home/ubuntu/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh"
 
@@ -629,9 +629,9 @@ function xxstaging() {
     DEPLOYMENT_GROUP_NAME="${APP}-Staging"
 
     source "/home/ubuntu/deploy/scripts/envs/${APP}-Build.sh"
-    docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
     docker exec buildserver /bin/bash -c "apt-get update -y"
     docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
+    docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
     docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
     source "/home/ubuntu/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh"
 
@@ -651,109 +651,121 @@ function xxstaging() {
     --DEPLOYMENT-ID "${DEPLOYMENT_ID}"
 }
 
-function deploy_prodcution() {
-    DOMAINS=$@
+function test_deploy() {
 
-    runCommand "sudo apt-get install -y php"
-    awsconfig
+  local ENVIRONMENT_NAME=""
+  local HOSTED_ZONE=""
+  local DEBUG="off"
+  local BUILD_NUMBER=$(date +"%y%m/%d-%H%M")
 
-    ENVIRONMENT_NAME="${APP}-Production"
-    ELB_NAME="${ENVIRONMENT_NAME}LoadBalancer"
+  while true; do
+    # uncomment the next line to see how shift is working
+    #echo "\$1:\"$1\" \$2:\"$2\" \$3:\"$3\""
+    if [ ! -z "$1" ]; then
+      case "$1" in
+        -h | --help ) usage; exit; ;;
+        -v | --DEBUG ) DEBUG="$2"; shift 2 ;;
+        -e | --ENVIRONMENT_NAME ) ENVIRONMENT_NAME="$2"; shift 2 ;;
+        -z | --HOSTED_ZONE="$2"; shift 2 ;;
+        -b | --BUILD_NUMBER="$2"; shift 2 ;;
+        -* ) echo "unknown option: $1" >&2; exit 1; shift; break ;;
+        * ) exit 1; shift 1;;
+      esac
+    else
+      echo "break"
+      break;
+    fi
+  done
 
-    ELB_OUTPUT=`aws elb describe-load-balancers --load-balancer-names ${ELB_NAME}`
+  runCommand "sudo apt-get install -y php"
+  awsconfig
 
-    SECURITY_GROUPS=`echo $ELB_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["LoadBalancerDescriptions"][0]["SecurityGroups"] as $v) echo $v." ";'`;
+  ELB_NAME="${ENVIRONMENT_NAME}LoadBalancer"
+  ELB_OUTPUT=`aws elb describe-load-balancers --load-balancer-names ${ELB_NAME}`
 
-    INSTANCE_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
-    INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+  SECURITY_GROUPS=`echo $ELB_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["LoadBalancerDescriptions"][0]["SecurityGroups"] as $v) echo $v." ";'`;
 
-    runCommand "aws route53 list-hosted-zones-by-name" "" "" HOSTED_ZONES
-    HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
+  INSTANCE_IP=$(curl -s "http://169.254.169.254/latest/meta-data/public-ipv4")
+  INSTANCE_ID=$(curl -s "http://169.254.169.254/latest/meta-data/instance-id")
+  CLIENT_IP=$(curl -s "http://checkip.amazonaws.com/")
 
-    for DOMAIN in "${DOMAINS[@]}"; do
-        INPUT_JSON="{\"ChangeBatch\": {\"Comment\": \"SUPERVOLT : Update the A record set\", \"Changes\": [{\"Action\": \"UPSERT\", \"ResourceRecordSet\": {\"Name\": \"${DOMAIN}\", \"Type\": \"A\", \"TTL\": 300, \"ResourceRecords\": [{\"Value\": \"$INSTANCE_IP\"}]}}]}}"
+  runCommand "aws route53 list-hosted-zones-by-name" "" "ok" HOSTED_ZONES
 
-        aws route53 change-resource-record-sets --hosted-zone-id "${HOSTED_ZONE_ID}" --cli-input-json "${INPUT_JSON}"
-    done
+  HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
 
-    aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}
+  for DOMAIN in "${DOMAINS[@]}"; do
+      INPUT_JSON="{\"ChangeBatch\": {\"Comment\": \"SUPERVOLT : Update the A record set\", \"Changes\": [{\"Action\": \"UPSERT\", \"ResourceRecordSet\": {\"Name\": \"${DOMAIN}\", \"Type\": \"A\", \"TTL\": 300, \"ResourceRecords\": [{\"Value\": \"$INSTANCE_IP\"}]}}]}}"
 
-    source "$(pwd)/deploy/scripts/envs/${APP}-Build.sh"
-    docker exec buildserver /bin/bash -c "apt-get update -y"
-    docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
-    docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
-    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
-    source "$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh"
+      aws route53 change-resource-record-sets --hosted-zone-id "${HOSTED_ZONE_ID}" --cli-input-json "${INPUT_JSON}"
+  done
+
+  aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}
+  runCommand "aws ec2 authorize-security-group-ingress --group-name ${SECURITY_GROUPS} --protocol tcp --port 22 --cidr ${CLIENT_IP}/31" "exists" ""
+
+  runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "" "build run"
+  runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"'
+  runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"'
+  runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";'
+  runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";'
+  runCommand "source '$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh'"
 }
 
+function real_deploy() {
+  DEPLOYMENT_GROUP_NAME="${APP}-Staging"
 
-function deploy_staging() {
-    DOMAINS=$@
+  runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "" "build run"
+  runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"'
+  runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"'
+  runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";'
+  runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";'
+  runCommand "source '$(pwd)/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh'"
 
-    runCommand "sudo apt-get install -y php"
-    awsconfig
+  # save image to tgz
+  runCommand "docker save webserver | gzip -c > deploy/webserver.tgz"
 
-    ENVIRONMENT_NAME="${APP}-Staging"
-    ELB_NAME="${ENVIRONMENT_NAME}LoadBalancer"
+  deploy_create \
+      --DEBUG beauty \
+      --APPLICATION-NAME "${APP}-App" \
+      --DEPLOYMENT-GROUP "${DEPLOYMENT_GROUP_NAME}" \
+      --S3-LOCATION-BUCKET "${S3_LOCATION_BUCKET}" \
+      --S3-FOLDER-NAME "${S3_FOLDER_NAME}" \
+      --DEPLOYMENT-OVERVIEW Succeeded \
+      DEPLOYMENT_ID
 
-    ELB_OUTPUT=`aws elb describe-load-balancers --load-balancer-names ${ELB_NAME}`
-
-    SECURITY_GROUPS=`echo $ELB_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["LoadBalancerDescriptions"][0]["SecurityGroups"] as $v) echo $v." ";'`;
-
-    INSTANCE_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
-    INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
-
-    runCommand "aws route53 list-hosted-zones-by-name" "" "" HOSTED_ZONES
-    HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
-
-    for DOMAIN in "${DOMAINS[@]}"; do
-        INPUT_JSON="{\"ChangeBatch\": {\"Comment\": \"SUPERVOLT : Update the A record set\", \"Changes\": [{\"Action\": \"UPSERT\", \"ResourceRecordSet\": {\"Name\": \"${DOMAIN}\", \"Type\": \"A\", \"TTL\": 300, \"ResourceRecords\": [{\"Value\": \"$INSTANCE_IP\"}]}}]}}"
-
-        aws route53 change-resource-record-sets --hosted-zone-id "${HOSTED_ZONE_ID}" --cli-input-json "${INPUT_JSON}"
-    done
-
-    aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}
-
-    runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "" "build run"
-    runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"'
-    runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"'
-    runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";'
-    runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";'
-    runCommand "source '$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh'"
+  deploy_infomation \
+  --DEPLOYMENT-ID "${DEPLOYMENT_ID}"
 }
 
-function deploy_test() {
-    DOMAINS=$@
-
-    runCommand "sudo apt-get install -y php"
-    awsconfig
-
-    ENVIRONMENT_NAME="${APP}-Test"
-    ELB_NAME="${ENVIRONMENT_NAME}LoadBalancer"
-
-    ELB_OUTPUT=`aws elb describe-load-balancers --load-balancer-names ${ELB_NAME}`
-
-    SECURITY_GROUPS=`echo $ELB_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["LoadBalancerDescriptions"][0]["SecurityGroups"] as $v) echo $v." ";'`;
-
-    INSTANCE_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
-    INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
-
-    runCommand "aws route53 list-hosted-zones-by-name" "" "" HOSTED_ZONES
-    HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
-
-    for DOMAIN in "${DOMAINS[@]}"; do
-        INPUT_JSON="{\"ChangeBatch\": {\"Comment\": \"SUPERVOLT : Update the A record set\", \"Changes\": [{\"Action\": \"UPSERT\", \"ResourceRecordSet\": {\"Name\": \"${DOMAIN}\", \"Type\": \"A\", \"TTL\": 300, \"ResourceRecords\": [{\"Value\": \"$INSTANCE_IP\"}]}}]}}"
-
-        aws route53 change-resource-record-sets --hosted-zone-id "${HOSTED_ZONE_ID}" --cli-input-json "${INPUT_JSON}"
-    done
-
-    aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}
-
-    source "$(pwd)/deploy/scripts/envs/${APP}-Build.sh"
-    docker exec buildserver /bin/bash -c "apt-get update -y"
-    docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"
-    docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";
-    docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";
-    source "$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh"
+function real_deploy_staging() {
+  test_deploy_staging test.yelloapi.io
+  real_deploy
 }
 
+function real_deploy_production() {
+  test_deploy_production yelloapi.io
+  real_deploy
+}
+
+function test_deploy_production() {
+    test_deploy \
+        --DEBUG on \
+        --ENVIRONMENT_NAME "${APP}-Production" \
+        --HOSTED_ZONE "yelloapi.io" \
+        --DOMAINS ${@}
+}
+
+function test_deploy_staging() {
+    test_deploy \
+        --DEBUG on \
+        --ENVIRONMENT_NAME "${APP}-Staging" \
+        --HOSTED_ZONE "yelloapi.io" \
+        --DOMAINS ${@}
+}
+
+function test_deploy_dev() {
+    test_deploy \
+        --DEBUG on \
+        --ENVIRONMENT_NAME "${APP}-Test" \
+        --HOSTED_ZONE "yelloapi.io" \
+        --DOMAINS ${@}
+}
