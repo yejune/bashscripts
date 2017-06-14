@@ -635,9 +635,9 @@ function test_deploy() {
   HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
 
   for DOMAIN in "${DOMAINS[@]}"; do
-      INPUT_JSON="{\"ChangeBatch\": {\"Comment\": \"SUPERVOLT : Update the A record set\", \"Changes\": [{\"Action\": \"UPSERT\", \"ResourceRecordSet\": {\"Name\": \"${DOMAIN}\", \"Type\": \"A\", \"TTL\": 300, \"ResourceRecords\": [{\"Value\": \"$INSTANCE_IP\"}]}}]}}"
+      echo "{\"ChangeBatch\": {\"Comment\": \"SUPERVOLT : Update the A record set\", \"Changes\": [{\"Action\": \"UPSERT\", \"ResourceRecordSet\": {\"Name\": \"${DOMAIN}\", \"Type\": \"A\", \"TTL\": 300, \"ResourceRecords\": [{\"Value\": \"$INSTANCE_IP\"}]}}]}}" > config.json
 
-      aws route53 change-resource-record-sets --hosted-zone-id "${HOSTED_ZONE_ID}" --cli-input-json "${INPUT_JSON}"
+      aws route53 change-resource-record-sets --hosted-zone-id "${HOSTED_ZONE_ID}" --change-batch file://./config.json
   done
 
   runCommand "aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}" "" ""
