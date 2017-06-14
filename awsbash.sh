@@ -637,7 +637,7 @@ function test_deploy() {
   for DOMAIN in "${DOMAINS[@]}"; do
       INPUT_JSON="{\"ChangeBatch\": {\"Comment\": \"SUPERVOLT : Update the A record set\", \"Changes\": [{\"Action\": \"UPSERT\", \"ResourceRecordSet\": {\"Name\": \"${DOMAIN}\", \"Type\": \"A\", \"TTL\": 300, \"ResourceRecords\": [{\"Value\": \"$INSTANCE_IP\"}]}}]}}"
 
-      runCommand "aws route53 change-resource-record-sets --hosted-zone-id ${HOSTED_ZONE_ID} --cli-input-json ${INPUT_JSON}" "" "record set"
+      aws route53 change-resource-record-sets --hosted-zone-id "${HOSTED_ZONE_ID}" --cli-input-json "${INPUT_JSON}"
   done
 
   runCommand "aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}" "" ""
