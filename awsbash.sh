@@ -558,15 +558,9 @@ function awslogs()
 state_file = /var/awslogs/state/agent-state
 
 [${DEPLOYMENT_GROUP_NAME}]
-datetime_format = '%Y-%m-%d %H:%M:%S'
+datetime_format = %Y-%m-%d %H:%M:%S
 file = /var/log/syslog
 log_group_name = ${DEPLOYMENT_GROUP_NAME}
-log_stream_name = {instance_id}
-
-[codedeploy-deployment-log]
-datetime_format = '%Y-%m-%d %H:%M:%S'
-file = /opt/codedeploy-agent/deployment-root/deployment-logs/codedeploy-agent-deployments.log
-log_group_name = /var/log/codedeploy/deployments-log
 log_stream_name = {instance_id}
 " | sudo tee --append  /var/awslogs/etc/config/awslogs.conf
 
