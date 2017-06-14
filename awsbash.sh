@@ -670,7 +670,7 @@ function real_deploy() {
   runCommand "docker save webserver | gzip -c > deploy/webserver.tgz"
 
   deploy_create \
-    --DEBUG beauty \
+    --DEBUG on \
     --APPLICATION-NAME "${APP}-App" \
     --DEPLOYMENT-GROUP "${DEPLOYMENT_GROUP_NAME}" \
     --S3-LOCATION-BUCKET "${S3_LOCATION_BUCKET}" \
