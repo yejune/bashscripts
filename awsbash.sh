@@ -683,7 +683,7 @@ function real_deploy() {
 }
 
 function real_deploy_production() {
-  real_deploy "${APP}-Production"
+  real_deploy "${APP}-Prod"
 }
 
 function real_deploy_staging() {
@@ -692,7 +692,7 @@ function real_deploy_staging() {
 
 function test_deploy_production() {
   test_deploy \
-    --ENVIRONMENT_NAME "${APP}-Production" \
+    --ENVIRONMENT_NAME "${APP}-Prod" \
     --HOSTED_ZONE "yelloapi.io" \
     --DOMAINS ${@}
 }
