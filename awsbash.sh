@@ -644,7 +644,7 @@ function test_deploy() {
   #runCommand "aws ec2 authorize-security-group-ingress --group-id ${SECURITY_GROUPS} --protocol tcp --port 22 --cidr ${CLIENT_IP}/31" "exists" ""
 
   runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "" "build run"
-  runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"'
+  docker exec buildserver /bin/bash -c "apt-get update -y"
   runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"'
   runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";'
   runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";'
