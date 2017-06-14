@@ -606,6 +606,7 @@ function test_deploy() {
         -h | --help ) usage; exit; ;;
         -v | --DEBUG ) DEBUG="$2"; shift 2 ;;
         -e | --ENVIRONMENT_NAME ) ENVIRONMENT_NAME="$2"; shift 2 ;;
+        -d | --DOMAINS ) DOMAINS="$2"; shift 2 ;;
         -z | --HOSTED_ZONE ) HOSTED_ZONE="$2"; shift 2 ;;
         -b | --BUILD_NUMBER ) BUILD_NUMBER="$2"; shift 2 ;;
         -* ) echo "unknown option: $1" >&2; exit 1; shift; break ;;
