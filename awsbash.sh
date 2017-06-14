@@ -531,7 +531,7 @@ function dockerInstall()
     sudo service docker restart
 }
 
-function codedeploy()
+function install_codedeploy()
 {
     sudo apt-get -y install ruby wget
 
@@ -542,7 +542,7 @@ function codedeploy()
     sudo ./install auto
 }
 
-function awslogs()
+function install_awslogs()
 {
     sudo apt-get -y install python curl
     REGION=`wget -qO- http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//'`
