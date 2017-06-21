@@ -630,7 +630,7 @@ function test_deploy() {
   INSTANCE_ID=$(curl -s "http://169.254.169.254/latest/meta-data/instance-id")
   CLIENT_IP=$(curl -s "http://checkip.amazonaws.com/")
 
-  runCommand "aws route53 list-hosted-zones-by-name" "" "ok" HOSTED_ZONES
+  runCommand "aws route53 list-hosted-zones-by-name" "err" "ok" HOSTED_ZONES
 
   HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
 
@@ -640,29 +640,29 @@ function test_deploy() {
       aws route53 change-resource-record-sets --hosted-zone-id "${HOSTED_ZONE_ID}" --cli-input-json "${INPUT}"
   done
 
-  runCommand "aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}" "" ""
+  runCommand "aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}" "error secret group" "success secret group"
   #runCommand "aws ec2 authorize-security-group-ingress --group-id ${SECURITY_GROUPS} --protocol tcp --port 22 --cidr ${CLIENT_IP}/31" "exists" ""
 
-  runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "" "build run"
-  runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"'
-  runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"'
-  runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";'
-  runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";'
-  runCommand "source '$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh'"
+  runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
+  docker exec buildserver /bin/bash -c "apt-get update -y"
+  runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error docker install" "success docker install"
+  runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";' "error composer" "success composer"
+  runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";' "error build" "success build"
+  runCommand "source '$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh'" "error start" "success start"
 }
 
 function real_deploy() {
   local DEPLOYMENT_GROUP_NAME=$@
 
-  runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "" "build run"
-  runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"'
-  runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"'
-  runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";'
-  runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";'
-  runCommand "source '$(pwd)/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh'"
+  runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
+  runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"' "error update" "success update"
+  runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error install docker" "success install docker"
+  runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";' "error composer" "success composer"
+  runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";' "error build" "success build"
+  runCommand "source '$(pwd)/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh'" "error run" "success run"
 
   # save image to tgz
-  runCommand "docker save webserver | gzip -c > deploy/webserver.tgz"
+  runCommand "docker save webserver | gzip -c > deploy/webserver.tgz" "error image save" "success image save"
 
   deploy_create \
     --DEBUG on \
