@@ -494,8 +494,6 @@ deploy_infomation() {
 
     PUBLIC_DNS_GET="aws ec2 describe-instances --instance-ids ${INSTANCE_ID} --output text --query 'Reservations[*].Instances[*].[InstanceId, NetworkInterfaces[0].Association.PublicIp, NetworkInterfaces[0].PrivateIpAddress]'"
 
-    #export AWS_DEFAULT_PROFILE=api && source deploy/scripts/awsbash.sh && deploy_infomation --DEPLOYMENT-ID "d-MJB03101L"
-
     runCommand "$PUBLIC_DNS_GET" \
         "error" \
         "" \
@@ -618,6 +616,9 @@ function test_deploy() {
     fi
   done
 
+  runCommand 'docker rm -f webserver'
+  runCommand 'docker rm -f buildserver'
+
   runCommand "sudo apt-get install -y php"
   awsconfig
 
@@ -629,6 +630,9 @@ function test_deploy() {
   INSTANCE_IP=$(curl -s "http://169.254.169.254/latest/meta-data/public-ipv4")
   INSTANCE_ID=$(curl -s "http://169.254.169.254/latest/meta-data/instance-id")
   CLIENT_IP=$(curl -s "http://checkip.amazonaws.com/")
+
+
+  aws ec2 create-or-update-tags --tags "ResourceId=${INSTANCE_ID},Key=Name,Value=Test Server $(date +"%y%m/%d-%H%M")"
 
   runCommand "aws route53 list-hosted-zones-by-name" "err" "ok" HOSTED_ZONES
 
@@ -654,7 +658,8 @@ function test_deploy() {
 
 function real_deploy() {
   local DEPLOYMENT_GROUP_NAME=$@
-
+  runCommand 'docker rm -f webserver'
+  runCommand 'docker rm -f buildserver'
   runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
   runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"' "error update" "success update"
   runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error install docker" "success install docker"
@@ -680,7 +685,8 @@ function real_deploy() {
 
 function real_worker_deploy() {
   local DEPLOYMENT_GROUP_NAME=$@
-
+  runCommand 'docker rm -f webserver'
+  runCommand 'docker rm -f buildserver'
   runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
   runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"' "error update" "success update"
   runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error install docker" "success install docker"
