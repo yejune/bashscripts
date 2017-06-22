@@ -632,7 +632,8 @@ function test_deploy() {
   CLIENT_IP=$(curl -s "http://checkip.amazonaws.com/")
 
 
-  aws ec2 create-or-update-tags --tags "ResourceId=${INSTANCE_ID},Key=Name,Value=Test Server $(date +"%y%m/%d-%H%M")"
+  aws ec2 create-or-update-tags --tags "ResourceId=${INSTANCE_ID},Key=Name,Value=Test Server[${DOMAINS}] $(date +"%y%m/%d-%H%M")"
+  DOMAINS=(${DOMAINS//,/ })
 
   runCommand "aws route53 list-hosted-zones-by-name" "err" "ok" HOSTED_ZONES
 
