@@ -616,8 +616,8 @@ function test_deploy() {
     fi
   done
 
-  runCommand 'docker rm -f webserver'
-  runCommand 'docker rm -f buildserver'
+  docker rm -f webserver 2>&1
+  docker rm -f buildserver 2>&1
 
   runCommand "sudo apt-get install -y php"
   awsconfig
@@ -658,9 +658,8 @@ function test_deploy() {
 
 function real_deploy() {
   local DEPLOYMENT_GROUP_NAME=$@
-  runCommand 'docker rm -f webserver'
-  runCommand 'docker rm -f buildserver'
-  runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
+  docker rm -f webserver 2>&1
+  docker rm -f buildserver' 2>&1  runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
   runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"' "error update" "success update"
   runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error install docker" "success install docker"
   runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";' "error composer" "success composer"
@@ -685,9 +684,8 @@ function real_deploy() {
 
 function real_worker_deploy() {
   local DEPLOYMENT_GROUP_NAME=$@
-  runCommand 'docker rm -f webserver'
-  runCommand 'docker rm -f buildserver'
-  runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
+  docker rm -f webserver 2>&1
+  docker rm -f buildserver' 2>&1  runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
   runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"' "error update" "success update"
   runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error install docker" "success install docker"
   runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";' "error composer" "success composer"
