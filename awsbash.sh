@@ -708,7 +708,7 @@ function real_deploy_production() {
   real_deploy "${APP}-Prod"
 }
 
-function real_deploy_production-worker() {
+function real_deploy_production_worker() {
   real_worker_deploy "${APP}-Prod-Worker"
 }
 
