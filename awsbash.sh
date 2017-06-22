@@ -754,7 +754,7 @@ function test_deploy_dev() {
 }
 
 function delete_instance() {
-   local INSTANCE_ID = ${@}
+   local INSTANCE_ID=${@}
 
    ELB_OUTPUT=`aws ec2 describe-instances --instance-ids ${INSTANCE_ID}`
 
