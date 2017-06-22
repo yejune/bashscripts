@@ -678,8 +678,38 @@ function real_deploy() {
     --DEPLOYMENT-ID "${DEPLOYMENT_ID}"
 }
 
+function real_worker_deploy() {
+  local DEPLOYMENT_GROUP_NAME=$@
+
+  runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
+  runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"' "error update" "success update"
+  runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error install docker" "success install docker"
+  runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";' "error composer" "success composer"
+  runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --build-arg BUILD_ENV=worker --tag webserver .";' "error build" "success build"
+  runCommand "source '$(pwd)/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh'" "error run" "success run"
+
+  # save image to tgz
+  runCommand "docker save webserver | gzip -c > deploy/webserver.tgz" "error image save" "success image save"
+
+  deploy_create \
+    --DEBUG on \
+    --APPLICATION-NAME "${APP}-App" \
+    --DEPLOYMENT-GROUP "${DEPLOYMENT_GROUP_NAME}" \
+    --S3-LOCATION-BUCKET "${S3_LOCATION_BUCKET}" \
+    --S3-FOLDER-NAME "${S3_FOLDER_NAME}" \
+    --DEPLOYMENT-OVERVIEW Succeeded \
+    DEPLOYMENT_ID
+
+  deploy_infomation \
+    --DEPLOYMENT-ID "${DEPLOYMENT_ID}"
+}
+
 function real_deploy_production() {
   real_deploy "${APP}-Prod"
+}
+
+function real_deploy_production-worker() {
+  real_worker_deploy "${APP}-Prod-Worker"
 }
 
 function real_deploy_staging() {
