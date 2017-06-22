@@ -633,7 +633,10 @@ function test_deploy() {
   CLIENT_IP=$(curl -s "http://checkip.amazonaws.com/")
 
 
-  aws ec2 create-or-update-tags --tags "ResourceId=${INSTANCE_ID},Key=Name,Value=Test Server[${DOMAINS}] $(date +"%y%m/%d-%H%M")"
+  aws ec2 create-tags --resources "${INSTANCE_ID}" \
+  --tags "Key=Name,Value='Test Server(${DOMAINS}) $(date +%y%m%d-%H%M)'" \
+         "Key=Domain,Value='${DOMAINS}'"
+
   DOMAINS=(${DOMAINS//,/ })
 
   runCommand "aws route53 list-hosted-zones-by-name" "err" "ok" HOSTED_ZONES
@@ -655,7 +658,7 @@ function test_deploy() {
   runCommand "source '$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh'" "error start" "success start"
 
   runCommand "aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}" "error secret group" "success secret group"
-  #runCommand "aws ec2 authorize-security-group-ingress --group-id ${SECURITY_GROUPS} --protocol tcp --port 22 --cidr ${CLIENT_IP}/31" "exists" ""
+  runCommand "aws ec2 authorize-security-group-ingress --group-id ${SECURITY_GROUPS} --protocol tcp --port 22 --cidr ${CLIENT_IP}/31" "exists" ""
 }
 
 function real_deploy() {
@@ -748,4 +751,27 @@ function test_deploy_dev() {
     --ENVIRONMENT_NAME "${APP}-Dev" \
     --HOSTED_ZONE "yelloapi.io" \
     --DOMAINS ${@}
+}
+
+function delete_instance() {
+   local INSTANCE_ID = ${@}
+
+   ELB_OUTPUT=`aws ec2 describe-instances --instance-ids ${INSTANCE_ID}`
+
+   INSTANCE_IP=`echo $ELB_OUTPUT | php -r 'echo json_decode(fgets(STDIN), true)["Reservations"][0]["Instances"][0]["NetworkInterfaces"][0]["Association"]["PublicIp"];'`;
+
+   DOMAINS=`echo $ELB_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["Reservations"][0]["Instances"][0]["Tags"] as $v) if($v["Key"]=="Domain") echo $v["Value"]."";'`;
+   echo $DOMAINS;
+
+   DOMAINS=(${DOMAINS//,/ })
+
+   runCommand "aws route53 list-hosted-zones-by-name" "err" "ok" HOSTED_ZONES
+
+   HOSTED_ZONE_ID=$(echo ${HOSTED_ZONES} | php -r "\$a=json_decode(fgets(STDIN), true);foreach(\$a['HostedZones'] as \$v) if(\$v['Name']=='${HOSTED_ZONE}.') echo str_replace(\"/hostedzone/\",\"\", \$v[\"Id\"]);");
+
+   for DOMAIN in "${DOMAINS[@]}"; do
+       INPUT="{\"ChangeBatch\": {\"Comment\": \"SUPERVOLT : Delete the A record set\", \"Changes\": [{\"Action\": \"DELETE\", \"ResourceRecordSet\": {\"Name\": \"${DOMAIN}\", \"Type\": \"A\", \"TTL\": 300, \"ResourceRecords\": [{\"Value\": \"$INSTANCE_IP\"}]}}]}}"
+
+       aws route53 change-resource-record-sets --hosted-zone-id "${HOSTED_ZONE_ID}" --cli-input-json "${INPUT}"
+   done
 }
