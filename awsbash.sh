@@ -369,7 +369,7 @@ deploy_create() {
   DEPLOYMENT_CONFIG_NAME="CodeDeployDefault.OneAtATime"
   DEPLOYMENT_DESCRIPTION="code deploy"
   h1 "Step 7: Creating Deployment"
-  DEPLOYMENT_CMD="aws deploy create-deployment --application-name $APPLICATION_NAME --deployment-config-name $DEPLOYMENT_CONFIG_NAME --deployment-group-name $DEPLOYMENT_GROUP --s3-location bucket=${S3_LOCATION_BUCKET},key=${S3_FOLDER_NAME},bundleType=zip --query 'deploymentId' --output text"
+  DEPLOYMENT_CMD="aws deploy create-deployment --application-name $APPLICATION_NAME --ignore-application-stop-failures --deployment-config-name $DEPLOYMENT_CONFIG_NAME --deployment-group-name $DEPLOYMENT_GROUP --s3-location bucket=${S3_LOCATION_BUCKET},key=${S3_FOLDER_NAME},bundleType=zip --query 'deploymentId' --output text"
 
   if [ -n "$DEPLOYMENT_DESCRIPTION" ]; then
     DEPLOYMENT_CMD="$DEPLOYMENT_CMD --description \"$DEPLOYMENT_DESCRIPTION\""
@@ -660,6 +660,8 @@ function real_deploy() {
   local DEPLOYMENT_GROUP_NAME=$@
   docker rm -f webserver 2> /dev/null
   docker rm -f buildserver 2> /dev/null
+  rm -rf ~/deploy/webserver
+
   runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
   runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"' "error update" "success update"
   runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error install docker" "success install docker"
@@ -687,6 +689,8 @@ function real_worker_deploy() {
   local DEPLOYMENT_GROUP_NAME=$@
   docker rm -f webserver 2> /dev/null
   docker rm -f buildserver 2> /dev/null
+  rm -rf ~/deploy/webserver
+
   runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
   runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"' "error update" "success update"
   runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error install docker" "success install docker"
