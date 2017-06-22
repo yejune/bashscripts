@@ -181,7 +181,7 @@ usage() {
   echo "help"
 }
 deploy_create() {
-  DEBUG="off"
+  local DEBUG="off"
   DEPLOYMENT_VAR_NAME=""
   while true; do
     # uncomment the next line to see how shift is working
@@ -394,7 +394,7 @@ deploy_create() {
 deploy_wait() {
 
   DEPLOYMENT_ID=""
-  DEBUG="off"
+  local DEBUG="off"
   while true; do
     # uncomment the next line to see how shift is working
     #echo "\$1:\"$1\" \$2:\"$2\" \$3:\"$3\""
@@ -463,7 +463,7 @@ deploy_wait() {
 
 deploy_infomation() {
   DEPLOYMENT_ID=""
-  DEBUG="off"
+  local DEBUG="off"
   while true; do
     # uncomment the next line to see how shift is working
     #echo "\$1:\"$1\" \$2:\"$2\" \$3:\"$3\""
@@ -471,6 +471,7 @@ deploy_infomation() {
       case "$1" in
         -h | --help ) usage; exit; ;;
         -v | --DEBUG ) DEBUG="$2"; shift 2 ;;
+        -v | --FILTER ) FILTER="$2"; shift 2 ;;
         -d | --DEPLOYMENT-ID ) DEPLOYMENT_ID="$2"; shift 2 ;;
         -* ) echo "unknown option: $1" >&2; exit 1; shift; break ;;
       esac
@@ -479,7 +480,7 @@ deploy_infomation() {
     fi
   done
 
-  INSTANCE_GET="aws deploy list-deployment-instances --instance-type-filter Green --deployment-id \"${DEPLOYMENT_ID}\" --output text --query \"instancesList\""
+  INSTANCE_GET="aws deploy list-deployment-instances --instance-type-filter ${FILTER} --deployment-id \"${DEPLOYMENT_ID}\" --output text --query \"instancesList\""
 
   runCommand "$INSTANCE_GET" \
       "error" \
@@ -683,7 +684,8 @@ function real_deploy() {
     DEPLOYMENT_ID
 
   deploy_infomation \
-    --DEPLOYMENT-ID "${DEPLOYMENT_ID}"
+    --DEPLOYMENT-ID "${DEPLOYMENT_ID}" \
+    --FILTER Green
 }
 
 function real_worker_deploy() {
