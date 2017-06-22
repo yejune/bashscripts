@@ -775,4 +775,5 @@ function delete_instance() {
        aws route53 change-resource-record-sets --hosted-zone-id "${HOSTED_ZONE_ID}" --cli-input-json "${INPUT}"
    done
 
+   aws ec2 terminate-instances --instance-ids "${INSTANCE_ID}"
 }
