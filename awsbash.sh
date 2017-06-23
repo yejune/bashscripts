@@ -663,8 +663,10 @@ function test_deploy() {
 function deploy_secrity_group() {
   # 22번 열린, 있는지 확인
   aws ec2 describe-security-groups --group-names supervolt-deploy-security-group 2> /dev/null
-  if [ "$?" ]; then
-    # 없으면 생성
+
+  ret_code=$?
+
+  if [ $ret_code != 0 ]; then
     aws ec2 create-security-group --group-name supervolt-deploy-security-group
     aws ec2 authorize-security-group-ingress --group-id supervolt-deploy-security-group --protocol tcp --port 22 --cidr 0.0.0.0/0
   fi
