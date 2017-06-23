@@ -654,7 +654,7 @@ function test_deploy() {
   runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"' "error apt-get update" "success apt-get update"
   runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error docker install" "success docker install"
   runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";' "error composer" "success composer"
-  runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";' "error build" "success build"
+  runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --build-arg worker --tag webserver .";' "error build" "success build"
   runCommand "source '$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh'" "error start" "success start"
 
   deploy_secrity_group
@@ -668,7 +668,7 @@ function deploy_secrity_group() {
 
   if [ $ret_code != 0 ]; then
     aws ec2 create-security-group --group-name Supervolt-Deploy-SecurityGroup --description 'Supervolt-Deploy-SecurityGroup Enable port SSH access.'
-    aws ec2 authorize-security-group-ingress --group-id Supervolt-Deploy-SecurityGroup --protocol tcp --port 22 --cidr 0.0.0.0/0
+    aws ec2 authorize-security-group-ingress --group-name Supervolt-Deploy-SecurityGroup --protocol tcp --port 22 --cidr 0.0.0.0/0
   fi
 }
 function real_deploy() {
