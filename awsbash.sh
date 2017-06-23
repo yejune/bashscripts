@@ -657,10 +657,17 @@ function test_deploy() {
   runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";' "error build" "success build"
   runCommand "source '$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh'" "error start" "success start"
 
-  runCommand "aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${SECURITY_GROUPS}" "error secret group" "success secret group"
-  runCommand "aws ec2 authorize-security-group-ingress --group-id ${SECURITY_GROUPS} --protocol tcp --port 22 --cidr 0.0.0.0/0" "exists" ""
+  runCommand "aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups supervolt-deploy-security-group ${SECURITY_GROUPS}" "error secret group" "success secret group"
 }
-
+function deploy_secrity_group() {
+  # 22번 열린, 있는지 확인
+  aws ec2 describe-security-groups --group-names supervolt-deploy-security-group 2> /dev/null
+  if [ "$?" ]; then
+    # 없으면 생성
+    aws ec2 create-security-group --group-name supervolt-deploy-security-group
+    aws ec2 authorize-security-group-ingress --group-id supervolt-deploy-security-group --protocol tcp --port 22 --cidr 0.0.0.0/0
+  fi
+}
 function real_deploy() {
   local DEPLOYMENT_GROUP_NAME=$@
   docker rm -f webserver 2> /dev/null
