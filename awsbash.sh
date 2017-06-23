@@ -657,6 +657,7 @@ function test_deploy() {
   runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";' "error build" "success build"
   runCommand "source '$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh'" "error start" "success start"
 
+  deploy_secrity_group
   runCommand "aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups supervolt-deploy-security-group ${SECURITY_GROUPS}" "error secret group" "success secret group"
 }
 function deploy_secrity_group() {
