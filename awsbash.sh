@@ -658,17 +658,17 @@ function test_deploy() {
   runCommand "source '$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh'" "error start" "success start"
 
   deploy_secrity_group
-  runCommand "aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups supervolt-deploy-security-group ${SECURITY_GROUPS}" "error secret group" "success secret group"
+  runCommand "aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups Supervolt-Deploy-SecurityGroup ${SECURITY_GROUPS}" "error secret group" "success secret group"
 }
 function deploy_secrity_group() {
   # 22번 열린, 있는지 확인
-  aws ec2 describe-security-groups --group-names supervolt-deploy-security-group 2> /dev/null
+  aws ec2 describe-security-groups --group-names Supervolt-Deploy-SecurityGroup 2> /dev/null
 
   ret_code=$?
 
   if [ $ret_code != 0 ]; then
-    aws ec2 create-security-group --group-name supervolt-deploy-security-group --description supervolt-deploy-security-group 'Enable port SSH access.'
-    aws ec2 authorize-security-group-ingress --group-id supervolt-deploy-security-group --protocol tcp --port 22 --cidr 0.0.0.0/0
+    aws ec2 create-security-group --group-name Supervolt-Deploy-SecurityGroup --description Supervolt-Deploy-SecurityGroup 'Enable port SSH access.'
+    aws ec2 authorize-security-group-ingress --group-id Supervolt-Deploy-SecurityGroup --protocol tcp --port 22 --cidr 0.0.0.0/0
   fi
 }
 function real_deploy() {
