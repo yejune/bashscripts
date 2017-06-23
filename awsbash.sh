@@ -661,7 +661,7 @@ function test_deploy() {
 }
 
 function deploy_secrity_group() {
-  aws ec2 describe-security-groups --group-names Supervolt-Deploy-SecurityGroup 2> /dev/null
+  runCommand "aws ec2 describe-security-groups --group-names Supervolt-Deploy-SecurityGroup 2> /dev/null" "" ""
 
   ret_code=$?
 
@@ -745,21 +745,21 @@ function real_deploy_staging() {
 function test_deploy_production() {
   test_deploy \
     --ENVIRONMENT_NAME "${APP}-Prod" \
-    --HOSTED_ZONE "yelloapi.io" \
+    --HOSTED_ZONE "${HOSTED_ZONE}" \
     --DOMAINS ${@}
 }
 
 function test_deploy_staging() {
   test_deploy \
     --ENVIRONMENT_NAME "${APP}-Staging" \
-    --HOSTED_ZONE "yelloapi.io" \
+    --HOSTED_ZONE "${HOSTED_ZONE}" \
     --DOMAINS ${@}
 }
 
 function test_deploy_dev() {
   test_deploy \
     --ENVIRONMENT_NAME "${APP}-Dev" \
-    --HOSTED_ZONE "yelloapi.io" \
+    --HOSTED_ZONE "${HOSTED_ZONE}" \
     --DOMAINS ${@}
 }
 
