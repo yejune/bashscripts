@@ -410,7 +410,6 @@ deploy_wait() {
         * ) exit 1; shift 1;;
       esac
     else
-      echo "break"
       break;
     fi
   done
@@ -612,7 +611,6 @@ function test_deploy() {
         * ) exit 1; shift 1;;
       esac
     else
-      echo "break"
       break;
     fi
   done
@@ -620,7 +618,7 @@ function test_deploy() {
   docker rm -f webserver 2> /dev/null
   docker rm -f buildserver 2> /dev/null
 
-  runCommand "sudo apt-get install -y php"
+  runCommand "sudo apt-get install -y php" "" ""
   awsconfig
 
   ELB_NAME="${ENVIRONMENT_NAME}LoadBalancer"
@@ -632,6 +630,7 @@ function test_deploy() {
   INSTANCE_ID=$(curl -s "http://169.254.169.254/latest/meta-data/instance-id")
   CLIENT_IP=$(curl -s "http://checkip.amazonaws.com/")
 
+  echo "INSTANCE_ID : ${INSTANCE_ID}"
 
   aws ec2 create-tags --resources "${INSTANCE_ID}" \
   --tags "Key=Name,Value='Test Server(${DOMAINS}) $(date +%y%m%d-%H%M)'" \
@@ -649,7 +648,6 @@ function test_deploy() {
       aws route53 change-resource-record-sets --hosted-zone-id "${HOSTED_ZONE_ID}" --cli-input-json "${INPUT}"
   done
 
-
   runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
   runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"' "error apt-get update" "success apt-get update"
   runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error docker install" "success docker install"
@@ -661,6 +659,7 @@ function test_deploy() {
   runCommand 'aws ec2 describe-security-groups --group-names Supervolt-Deploy-SecurityGroup --output text --query "SecurityGroups[0].GroupId"' "" "" GROUPID
   runCommand "aws ec2 modify-instance-attribute --instance-id ${INSTANCE_ID} --groups ${GROUPID} ${SECURITY_GROUPS}" "error secret group" "success secret group"
 }
+
 function deploy_secrity_group() {
   aws ec2 describe-security-groups --group-names Supervolt-Deploy-SecurityGroup 2> /dev/null
 
@@ -671,6 +670,7 @@ function deploy_secrity_group() {
     aws ec2 authorize-security-group-ingress --group-name Supervolt-Deploy-SecurityGroup --protocol tcp --port 22 --cidr 0.0.0.0/0
   fi
 }
+
 function real_deploy() {
   local DEPLOYMENT_GROUP_NAME=$@
   docker rm -f webserver 2> /dev/null
