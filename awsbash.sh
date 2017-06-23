@@ -667,7 +667,7 @@ function deploy_secrity_group() {
   ret_code=$?
 
   if [ $ret_code != 0 ]; then
-    aws ec2 create-security-group --group-name supervolt-deploy-security-group
+    aws ec2 create-security-group --group-name supervolt-deploy-security-group --description supervolt-deploy-security-group 'Enable port SSH access.'
     aws ec2 authorize-security-group-ingress --group-id supervolt-deploy-security-group --protocol tcp --port 22 --cidr 0.0.0.0/0
   fi
 }
