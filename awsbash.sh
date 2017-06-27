@@ -764,13 +764,13 @@ function test_deploy_dev() {
 }
 
 function delete_instance() {
-   local INSTANCE_ID=${@}
+   local INSTANCE_ID=$(curl -s "http://169.254.169.254/latest/meta-data/instance-id")
 
-   ELB_OUTPUT=`aws ec2 describe-instances --instance-ids ${INSTANCE_ID}`
+   INSTANCE_OUTPUT=`aws ec2 describe-instances --instance-ids ${INSTANCE_ID}`
 
-   INSTANCE_IP=`echo $ELB_OUTPUT | php -r 'echo json_decode(fgets(STDIN), true)["Reservations"][0]["Instances"][0]["NetworkInterfaces"][0]["Association"]["PublicIp"];'`;
+   INSTANCE_IP=`echo $INSTANCE_OUTPUT | php -r 'echo json_decode(fgets(STDIN), true)["Reservations"][0]["Instances"][0]["NetworkInterfaces"][0]["Association"]["PublicIp"];'`;
 
-   DOMAINS=`echo $ELB_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["Reservations"][0]["Instances"][0]["Tags"] as $v) if($v["Key"]=="Domain") echo $v["Value"]."";'`;
+   DOMAINS=`echo $INSTANCE_OUTPUT | php -r 'foreach(json_decode(fgets(STDIN), true)["Reservations"][0]["Instances"][0]["Tags"] as $v) if($v["Key"]=="Domain") echo $v["Value"]."";'`;
    echo $DOMAINS;
 
    DOMAINS=(${DOMAINS//,/ })
