@@ -652,7 +652,7 @@ function test_deploy() {
   runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"' "error apt-get update" "success apt-get update"
   runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error docker install" "success docker install"
   runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";' "error composer" "success composer"
-  runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --build-arg worker --tag webserver .";' "error build" "success build"
+  runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --build-arg BUILD_ENV=worker --tag webserver .";' "error build" "success build"
   runCommand "source '$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh'" "error start" "success start"
 
   deploy_secrity_group
