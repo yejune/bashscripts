@@ -742,6 +742,10 @@ function real_deploy_staging() {
   real_deploy "${APP}-Staging"
 }
 
+function real_deploy_staging_worker() {
+  real_worker_deploy "${APP}-Staging-Worker"
+}
+
 function test_deploy_production() {
   test_deploy \
     --ENVIRONMENT_NAME "${APP}-Prod" \
