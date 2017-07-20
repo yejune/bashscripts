@@ -682,7 +682,7 @@ function real_deploy() {
   runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error install docker" "success install docker"
   runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";' "error composer" "success composer"
   runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";' "error build" "success build"
-  runCommand "source '$(pwd)/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh'" "error run" "success run"
+  #runCommand "source '$(pwd)/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh'" "error run" "success run"
 
   # save image to tgz
   runCommand "docker save webserver | gzip -c > deploy/webserver.tgz" "error image save" "success image save"
@@ -712,7 +712,7 @@ function real_worker_deploy() {
   runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error install docker" "success install docker"
   runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";' "error composer" "success composer"
   runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --build-arg BUILD_ENV=worker --tag webserver .";' "error build" "success build"
-  runCommand "source '$(pwd)/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh'" "error run" "success run"
+  #runCommand "source '$(pwd)/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh'" "error run" "success run"
 
   # save image to tgz
   runCommand "docker save webserver | gzip -c > deploy/webserver.tgz" "error image save" "success image save"
