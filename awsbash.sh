@@ -127,12 +127,6 @@ inArray() {
     return 1
 }
 
-jsonValue() {
-  key=$1
-  num=$2
-  awk -F"[,:}]" '{for(i=1;i<=NF;i++){if($i~/'$key'\042/){print $(i+1)}}}' | tr -d '"' | sed -n ${num}p
-}
-
 installAwsCli() {
   h2 "Installing AWS CLI"
   runCommand "sudo apt-get -y install python zip unzip"
@@ -505,69 +499,6 @@ deploy_infomation() {
 
 }
 
-function awscli()
-{
-    sudo apt-get -y install python zip unzip
-    curl -s https://s3.amazonaws.com/aws-cli/awscli-bundle.zip -o awscli-bundle.zip
-    unzip awscli-bundle.zip
-    sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
-}
-
-function dockerInstall()
-{
-    curl -s https://get.docker.com | sudo sh;
-    sudo usermod -aG docker ubuntu;
-
-    sudo mkdir -p /etc/systemd/system/docker.service.d/
-
-    sudo touch /etc/systemd/system/docker.service.d/aws-credentials.conf
-    echo "[Service]" | sudo tee --append /etc/systemd/system/docker.service.d/aws-credentials.conf > /dev/null
-    echo "Environment=\"AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}\"" | sudo tee --append  /etc/systemd/system/docker.service.d/aws-credentials.conf > /dev/null
-    echo "Environment=\"AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}\"" | sudo tee --append /etc/systemd/system/docker.service.d/aws-credentials.conf > /dev/null
-
-    sudo systemctl daemon-reload
-    sudo service docker restart
-}
-
-function install_codedeploy()
-{
-    sudo apt-get -y install ruby wget
-
-    REGION=`wget -qO- http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//'`
-
-    wget https://aws-codedeploy-${REGION}.s3.amazonaws.com/latest/install
-    chmod +x ./install
-    sudo ./install auto
-}
-
-function install_awslogs()
-{
-    sudo apt-get -y install python curl
-    REGION=`wget -qO- http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//'`
-
-    sudo mkdir -p /var/awslogs/etc/config
-    sudo mkdir -p /var/awslogs/state/
-    sudo mkdir -p /opt/codedeploy-agent/deployment-root/deployment-logs/
-
-    sudo touch /var/awslogs/state/agent-state
-    sudo touch /opt/codedeploy-agent/deployment-root/deployment-logs/codedeploy-agent-deployments.log
-    echo "
-[general]
-state_file = /var/awslogs/state/agent-state
-
-[${DEPLOYMENT_GROUP_NAME}]
-datetime_format = %Y-%m-%d %H:%M:%S
-file = /var/log/syslog
-log_group_name = ${DEPLOYMENT_GROUP_NAME}
-log_stream_name = {instance_id}
-" | sudo tee --append  /var/awslogs/etc/config/awslogs.conf
-
-    sudo curl -s https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py -O
-    sudo chmod +x ./awslogs-agent-setup.py
-    sudo ./awslogs-agent-setup.py -n -r "${REGION}" -c /var/awslogs/etc/config/awslogs.conf
-
-}
-
 function awsconfig()
 {
     aws configure set aws_access_key_id "${AWS_ACCESS_KEY_ID}"
@@ -649,10 +580,8 @@ function test_deploy() {
   done
 
   runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
-  runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"' "error apt-get update" "success apt-get update"
-  runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error docker install" "success docker install"
   runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";' "error composer" "success composer"
-  runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --build-arg BUILD_ENV=worker --tag webserver .";' "error build" "success build"
+  runCommand "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --build-arg BUILD_ENV=worker --tag webserver ." "error build" "success build"
   runCommand "source '$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh'" "error start" "success start"
 
   deploy_secrity_group
@@ -675,13 +604,11 @@ function real_deploy() {
   local DEPLOYMENT_GROUP_NAME=$@
   docker rm -f webserver 2> /dev/null
   docker rm -f buildserver 2> /dev/null
-  rm -rf ~/deploy/webserver
+  rm -rf ~/deploy/webserver.tgz
 
   runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
-  runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"' "error update" "success update"
-  runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error install docker" "success install docker"
   runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";' "error composer" "success composer"
-  runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver .";' "error build" "success build"
+  runCommand "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver ." "error build" "success build"
   #runCommand "source '$(pwd)/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh'" "error run" "success run"
 
   # save image to tgz
@@ -705,13 +632,11 @@ function real_worker_deploy() {
   local DEPLOYMENT_GROUP_NAME=$@
   docker rm -f webserver 2> /dev/null
   docker rm -f buildserver 2> /dev/null
-  rm -rf ~/deploy/webserver
+  rm -rf ~/deploy/webserver.tgz
 
   runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
-  runCommand 'docker exec buildserver /bin/bash -c "apt-get update -y"' "error update" "success update"
-  runCommand 'docker exec buildserver /bin/bash -c "curl -s https://get.docker.com | sh;"' "error install docker" "success install docker"
   runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";' "error composer" "success composer"
-  runCommand 'docker exec buildserver /bin/bash -c "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --build-arg BUILD_ENV=worker --tag webserver .";' "error build" "success build"
+  runCommand "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --build-arg BUILD_ENV=worker --tag webserver ." "error build" "success build"
   #runCommand "source '$(pwd)/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh'" "error run" "success run"
 
   # save image to tgz
