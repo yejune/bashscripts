@@ -579,8 +579,8 @@ function test_deploy() {
       aws route53 change-resource-record-sets --hosted-zone-id "${HOSTED_ZONE_ID}" --cli-input-json "${INPUT}"
   done
 
-  runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
-  runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";' "error composer" "success composer"
+  #runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
+  runCommand "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader" "error composer" "success composer"
   runCommand "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --build-arg BUILD_ENV=worker --tag webserver ." "error build" "success build"
   runCommand "source '$(pwd)/deploy/scripts/envs/${ENVIRONMENT_NAME}.sh'" "error start" "success start"
 
@@ -606,8 +606,8 @@ function real_deploy() {
   docker rm -f buildserver 2> /dev/null
   rm -rf ~/deploy/webserver.tgz
 
-  runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
-  runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";' "error composer" "success composer"
+  #runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
+  runCommand "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader" "error composer" "success composer"
   runCommand "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --tag webserver ." "error build" "success build"
   #runCommand "source '$(pwd)/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh'" "error run" "success run"
 
@@ -634,8 +634,8 @@ function real_worker_deploy() {
   docker rm -f buildserver 2> /dev/null
   rm -rf ~/deploy/webserver.tgz
 
-  runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
-  runCommand 'docker exec buildserver /bin/bash -c "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader";' "error composer" "success composer"
+  #runCommand "source '$(pwd)/deploy/scripts/envs/${APP}-Build.sh'" "error build run" "success build run"
+  runCommand "composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader" "error composer" "success composer"
   runCommand "docker build --build-arg BUILD_NUMBER=${BUILD_NUMBER} --build-arg BUILD_ENV=worker --tag webserver ." "error build" "success build"
   #runCommand "source '$(pwd)/deploy/scripts/envs/${DEPLOYMENT_GROUP_NAME}.sh'" "error run" "success run"
 
