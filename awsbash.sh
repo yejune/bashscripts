@@ -22,6 +22,19 @@ blue="\e[34m"
 # Common Output Styles
 #
 
+function wait_for_dpkg_lock {
+  # check for a lock on dpkg (another installation is running)
+  sudo lsof /var/lib/dpkg/lock > /dev/null
+  dpkg_is_locked="$?"
+  if [ "$dpkg_is_locked" == "0" ]; then
+    echo "Waiting for another installation to finish"
+    sleep 5
+    wait_for_dpkg_lock
+  else
+    sudo rm -f /var/lib/dpkg/lock
+  fi
+}
+ 
 h1() {
   if [ ! -z "$DEBUG" ]; then
     if [ "$DEBUG" == "on" ]; then
@@ -129,6 +142,7 @@ inArray() {
 
 installAwsCli() {
   h2 "Installing AWS CLI"
+  wait_for_dpkg_lock
   runCommand "sudo apt-get -y install python zip unzip"
   runCommand "curl -s https://s3.amazonaws.com/aws-cli/awscli-bundle.zip -o awscli-bundle.zip"
   runCommand "unzip awscli-bundle.zip"
@@ -549,6 +563,7 @@ function test_deploy() {
   docker rm -f webserver 2> /dev/null
   docker rm -f buildserver 2> /dev/null
 
+  wait_for_dpkg_lock
   runCommand "sudo apt-get install -y php" "" ""
   awsconfig
 
